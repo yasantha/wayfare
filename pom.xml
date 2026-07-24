@@ -87,4 +87,25 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
+
+  <!-- Applies to the 7 service children (jars). platform-commons parents off
+       spring-boot-starter-parent directly, so it stays a plain library. -->
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+        <configuration>
+          <!-- Run goal uses the repo root as CWD so relative secrets/ paths resolve. -->
+          <workingDirectory>${maven.multiModuleProjectDirectory}</workingDirectory>
+          <excludes>
+            <exclude>
+              <groupId>org.projectlombok</groupId>
+              <artifactId>lombok</artifactId>
+            </exclude>
+          </excludes>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
 </project>
