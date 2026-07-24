@@ -83,12 +83,14 @@ Prometheus 9090 · Grafana 3000 · Redpanda Console 8090.
 - [x] docker-compose infra stack (Postgres · Redpanda · Redis · Jaeger · Prometheus · Grafana)
 - [x] Postgres init script creating all six databases
 - [x] RS256 keypair generated into `secrets/`
-- [ ] Set the OpenAI monthly spend cap in the dashboard
-- [ ] Verify `docker compose up` is green (needs Docker Desktop running)
-- [ ] Scaffold the 7 Spring Boot services from start.spring.io (see below)
-- [ ] Build `platform-commons` (ProblemDetail, correlation filter, JWT claim extraction)
+- [x] Build `platform-commons` (ProblemDetail, correlation filter, user context, pagination)
+- [x] Scaffold the 7 Spring Boot services (monorepo Maven reactor)
+- [x] CI matrix (build → test per service via reactor)
+- [ ] **You:** install Maven + Docker Desktop on your machine (neither detected)
+- [ ] **You:** set the free LLM provider key + spend/rate awareness (Groq); keep `DEMO_MODE=true`
+- [ ] **You:** verify `docker compose up` is green
+- [ ] **You:** `mvn -B verify` at the repo root builds all modules green
 - [ ] Phase 0 spike: one throwaway endpoint that writes to Postgres + publishes to Kafka + appears in Jaeger, then delete it
-- [ ] CI skeleton (build → test per service)
 
 ### Service scaffolding (start.spring.io — Maven · Java 21 · Spring Boot 3.x)
 
