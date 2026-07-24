@@ -25,4 +25,9 @@
 **Rejected:** HS256 with a shared secret distributed to every service.
 **Why:** No signing secret is copied across six services, so a compromise of any verifying service cannot forge tokens; this is the single strongest edge-security signal in the project.
 
+## ADR-005 — Free LLM provider behind the LlmClient port (not OpenAI)
+**Chosen:** Provider-agnostic `LlmClient` port with a free provider — Groq (OpenAI-compatible, free, fast) as the live default — plus `DEMO_MODE=true` fixtures as the deployed default; Gemini and Ollama as alternative adapters.
+**Rejected:** OpenAI as the sole provider (paid); hardcoding any single vendor's SDK into the service.
+**Why:** No budget for a paid API, and the design already isolates the provider behind one adapter class — so a free provider is a config/one-class swap with zero architectural impact; `DEMO_MODE` fixtures mean the public demo spends nothing and never hits a rate limit, while the validator + repair loop backstops any provider's JSON. Provider-agnosticism is a stronger interview signal than a single-vendor dependency.
+
 <!-- Add new decisions above this line as you build. -->
