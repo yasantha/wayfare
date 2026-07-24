@@ -62,12 +62,6 @@
       <version>9.47</version>
     </dependency>
 
-    <dependency>
-      <groupId>org.projectlombok</groupId>
-      <artifactId>lombok</artifactId>
-      <optional>true</optional>
-    </dependency>
-
     <!-- test: real Postgres + Kafka -->
     <dependency>
       <groupId>org.springframework.boot</groupId>

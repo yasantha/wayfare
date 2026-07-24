@@ -92,7 +92,7 @@ Prometheus 9090 · Grafana 3000 · Redpanda Console 8090.
 - [ ] **You:** `mvn -B verify` at the repo root builds all modules green
 - [ ] Phase 0 spike: one throwaway endpoint that writes to Postgres + publishes to Kafka + appears in Jaeger, then delete it
 
-### Service scaffolding (start.spring.io — Maven · Java 21 · Spring Boot 3.x)
+### Service scaffolding (Maven · Java 25 · Spring Boot 3.5.16)
 
 | Service | Dependencies |
 |---|---|

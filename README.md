@@ -46,5 +46,5 @@ docker compose ps
 
 ## Tech stack
 
-Java 21 · Spring Boot 3.x · Spring Cloud Gateway · PostgreSQL 16 · Kafka/Redpanda ·
+Java 25 · Spring Boot 3.5 · Spring Cloud Gateway · PostgreSQL 16 · Kafka/Redpanda ·
 Redis · Flyway · Resilience4j · Micrometer + OpenTelemetry · Testcontainers · Docker

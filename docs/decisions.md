@@ -30,4 +30,9 @@
 **Rejected:** OpenAI as the sole provider (paid); hardcoding any single vendor's SDK into the service.
 **Why:** No budget for a paid API, and the design already isolates the provider behind one adapter class — so a free provider is a config/one-class swap with zero architectural impact; `DEMO_MODE` fixtures mean the public demo spends nothing and never hits a rate limit, while the validator + repair loop backstops any provider's JSON. Provider-agnosticism is a stronger interview signal than a single-vendor dependency.
 
+## ADR-006 — Java 25 + Spring Boot 3.5.16, and no Lombok
+**Chosen:** Target Java 25 (LTS); Spring Boot 3.5.16 (latest 3.x, Spring Framework 6.2) with Spring Cloud 2025.0.3; drop Lombok, use plain hand-written accessors on entities. Mockito runs with `-Dnet.bytebuddy.experimental=true`.
+**Rejected:** Java 21 (works with Boot 3.4.1 but not the requested runtime); Spring Boot 4.x (Spring Framework 7 — a much larger migration); keeping Lombok (its annotation processor failed silently under JDK 25).
+**Why:** Java 25 requires tooling that understands class-file major version 69 — Boot 3.4.1's repackage plugin does not, Boot 3.5.16 does; staying on the 3.5 line keeps all existing Spring 6 code unchanged. Dropping Lombok removes a recurring bleeding-edge-JDK failure mode for the cost of a few explicit getters. Whole reactor builds green on JDK 25.
+
 <!-- Add new decisions above this line as you build. -->
