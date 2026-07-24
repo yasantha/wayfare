@@ -1,0 +1,70 @@
+spring:
+  application:
+    name: api-gateway
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${JWKS_URI:http://localhost:8081/.well-known/jwks.json}
+  cloud:
+    gateway:
+      # Strip the /api/v1 prefix so downstream services see their own paths
+      # (e.g. /api/v1/auth/register -> /auth/register).
+      default-filters:
+        - StripPrefix=2
+      routes:
+        # AI generation routes must precede the trip route (more specific first).
+        - id: itinerary-ai
+          uri: ${AI_URI:http://localhost:8085}
+          predicates:
+            - Path=/api/v1/generation-requests/**
+        - id: itinerary-ai-generate
+          uri: ${AI_URI:http://localhost:8085}
+          predicates:
+            - Path=/api/v1/trips/*/itinerary:generate,/api/v1/trips/*/generation-status
+        - id: auth
+          uri: ${AUTH_URI:http://localhost:8081}
+          predicates:
+            - Path=/api/v1/auth/**
+        - id: user
+          uri: ${USER_URI:http://localhost:8082}
+          predicates:
+            - Path=/api/v1/me/**
+        - id: catalog
+          uri: ${CATALOG_URI:http://localhost:8083}
+          predicates:
+            - Path=/api/v1/destinations/**,/api/v1/activities/**
+        - id: trip
+          uri: ${TRIP_URI:http://localhost:8084}
+          predicates:
+            - Path=/api/v1/trips/**,/api/v1/itineraries/**,/api/v1/itinerary-items/**
+        - id: recommendation
+          uri: ${RECO_URI:http://localhost:8086}
+          predicates:
+            - Path=/api/v1/recommendations/**
+
+server:
+  port: 8080
+
+# NOTE: SecurityWebFilterChain (permit /api/v1/auth/** + actuator, authenticate
+# the rest, block /internal/**, add rate limiting) is added in Phase 1.
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  tracing:
+    sampling:
+      probability: 1.0
+  otlp:
+    tracing:
+      endpoint: ${OTLP_ENDPOINT:http://localhost:4318/v1/traces}
+
+logging:
+  pattern:
+    level: "%5p [${spring.application.name},%X{traceId:-},%X{spanId:-},%X{correlationId:-}]"

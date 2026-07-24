@@ -1,0 +1,62 @@
+spring:
+  application:
+    name: itinerary-ai-service
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/itinerary_ai_db
+    username: ${POSTGRES_USER:wayfare}
+    password: ${POSTGRES_PASSWORD:wayfare}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  kafka:
+    bootstrap-servers: ${KAFKA_BROKERS:localhost:19092}
+    consumer:
+      group-id: itinerary-ai-service
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${JWKS_URI:http://localhost:8081/.well-known/jwks.json}
+
+server:
+  port: 8085
+
+# Provider-agnostic LLM config — DEMO_MODE serves fixtures (no spend).
+llm:
+  demo-mode: ${DEMO_MODE:true}
+  provider: ${LLM_PROVIDER:groq}
+  read-timeout: 60s
+  groq:
+    base-url: ${GROQ_BASE_URL:https://api.groq.com/openai/v1}
+    api-key: ${GROQ_API_KEY:}
+    model: ${GROQ_MODEL:llama-3.3-70b-versatile}
+  gemini:
+    api-key: ${GEMINI_API_KEY:}
+    model: ${GEMINI_MODEL:gemini-2.0-flash}
+  ollama:
+    base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+    model: ${OLLAMA_MODEL:llama3.1}
+
+quota:
+  per-user-per-day: ${GEN_QUOTA_PER_USER_PER_DAY:3}
+  global-per-day: ${GEN_QUOTA_GLOBAL_PER_DAY:20}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  tracing:
+    sampling:
+      probability: 1.0
+  otlp:
+    tracing:
+      endpoint: ${OTLP_ENDPOINT:http://localhost:4318/v1/traces}
+
+logging:
+  pattern:
+    level: "%5p [${spring.application.name},%X{traceId:-},%X{spanId:-},%X{correlationId:-}]"

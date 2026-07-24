@@ -1,0 +1,44 @@
+spring:
+  application:
+    name: auth-service
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/auth_db
+    username: ${POSTGRES_USER:wayfare}
+    password: ${POSTGRES_PASSWORD:wayfare}
+  jpa:
+    hibernate:
+      ddl-auto: validate      # Flyway owns the schema; never 'update'
+    open-in-view: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  kafka:
+    bootstrap-servers: ${KAFKA_BROKERS:localhost:19092}
+
+server:
+  port: 8081
+
+# RS256 signing keypair (mounted from secrets/, see .env.example)
+jwt:
+  private-key-path: ${JWT_PRIVATE_KEY_PATH:secrets/private.pem}
+  public-key-path: ${JWT_PUBLIC_KEY_PATH:secrets/public.pem}
+  issuer: ${JWT_ISSUER:https://api.wayfare.local}
+  audience: ${JWT_AUDIENCE:wayfare-api}
+  access-token-ttl: 15m
+  refresh-token-ttl: 30d
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  tracing:
+    sampling:
+      probability: 1.0
+  otlp:
+    tracing:
+      endpoint: ${OTLP_ENDPOINT:http://localhost:4318/v1/traces}
+
+logging:
+  pattern:
+    level: "%5p [${spring.application.name},%X{traceId:-},%X{spanId:-},%X{correlationId:-}]"
