@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Per-service independent builds. Add each service to the matrix as it lands.
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          # - auth-service
+          # - user-service
+          # - catalog-service
+          # - trip-service
+          # - itinerary-ai-service
+          # - recommendation-service
+          # - api-gateway
+          - platform-commons
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - name: Build & test ${{ matrix.service }}
+        working-directory: ${{ matrix.service }}
+        run: |
+          if [ -f pom.xml ]; then mvn -B verify; else echo "no pom yet — skipping"; fi
