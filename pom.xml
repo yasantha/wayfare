@@ -92,13 +92,31 @@
        spring-boot-starter-parent directly, so it stays a plain library. -->
   <build>
     <plugins>
-      <!-- Mockito/ByteBuddy needs the experimental flag to instrument on JDK 25. -->
+      <!-- Unit tests (*Test) — run in `test`, no Docker needed.
+           Mockito/ByteBuddy needs the experimental flag to instrument on JDK 25. -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
           <argLine>-Dnet.bytebuddy.experimental=true</argLine>
         </configuration>
+      </plugin>
+      <!-- Integration tests (*IT) — run in `verify`, require a running Docker
+           (Testcontainers). `mvn test` skips these; `mvn verify` runs them. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <configuration>
+          <argLine>-Dnet.bytebuddy.experimental=true</argLine>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>integration-test</goal>
+              <goal>verify</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <groupId>org.springframework.boot</groupId>
