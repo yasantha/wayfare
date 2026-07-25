@@ -27,7 +27,8 @@ public class SecurityConfig {
                 .authorizeExchange(exchange -> exchange
                         .pathMatchers("/api/v1/auth/**").permitAll()
                         .pathMatchers("/actuator/**").permitAll()
-                        .pathMatchers("/**/internal/**").denyAll()
+                        // Internal service-to-service paths are never reachable from outside.
+                        .pathMatchers("/internal/**", "/api/v1/internal/**").denyAll()
                         .anyExchange().authenticated())
                 .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> {
                 }));

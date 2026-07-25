@@ -1,9 +1,10 @@
 -- Auth Service schema (design §4.2). Flyway owns it; ddl-auto=validate.
-create extension if not exists citext;
-
+-- Email is stored lowercase-normalized by the application (AuthService), so a
+-- plain unique varchar gives case-insensitive behaviour without citext (which
+-- Hibernate schema-validation reports as an incompatible column type).
 create table users (
     id             uuid primary key,
-    email          citext      not null unique,
+    email          varchar(255) not null unique,
     password_hash  varchar(100) not null,
     role           varchar(32) not null default 'ROLE_USER',
     status         varchar(32) not null default 'ACTIVE',
