@@ -35,4 +35,9 @@
 **Rejected:** Java 21 (works with Boot 3.4.1 but not the requested runtime); Spring Boot 4.x (Spring Framework 7 — a much larger migration); keeping Lombok (its annotation processor failed silently under JDK 25).
 **Why:** Java 25 requires tooling that understands class-file major version 69 — Boot 3.4.1's repackage plugin does not, Boot 3.5.16 does; staying on the 3.5 line keeps all existing Spring 6 code unchanged. Dropping Lombok removes a recurring bleeding-edge-JDK failure mode for the cost of a few explicit getters. Whole reactor builds green on JDK 25.
 
+## ADR-007 — One repository interface per file, never nested
+**Chosen:** Every Spring Data repository is its own top-level interface file (`UserProfileRepository.java`, etc.), matching the pattern already used in auth-service.
+**Rejected:** Grouping related repositories as nested interfaces inside one holder class (tried first in user-service — `Repositories.UserProfileRepository`).
+**Why:** Nested repository interfaces failed Spring Data JPA's component scan (`NoSuchBeanDefinitionException` at context startup) even though they're implicitly public static; caught immediately by the Testcontainers integration test rather than at runtime in a later phase — exactly why every service gets an IT before being called done.
+
 <!-- Add new decisions above this line as you build. -->
