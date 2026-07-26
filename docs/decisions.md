@@ -40,4 +40,9 @@
 **Rejected:** Grouping related repositories as nested interfaces inside one holder class (tried first in user-service — `Repositories.UserProfileRepository`).
 **Why:** Nested repository interfaces failed Spring Data JPA's component scan (`NoSuchBeanDefinitionException` at context startup) even though they're implicitly public static; caught immediately by the Testcontainers integration test rather than at runtime in a later phase — exactly why every service gets an IT before being called done.
 
+## ADR-008 — Nullable JPQL filter parameters need explicit casts (or native SQL)
+**Chosen:** For a nullable string filter reused in both an `is null` check and a function call (e.g. `lower(...)`), wrap every use in `cast(:x as string)`. For a nullable numeric filter, don't fight Hibernate's HQL cast — use a native query with a plain SQL cast instead.
+**Rejected:** Trusting Hibernate to infer the parameter type from context; using `cast(:x as java.math.BigDecimal)` (a Java class name — HQL wants its own type tokens like `big_decimal`, and even the correct token still mis-bound to bytea against real Postgres in this Hibernate 6.6.53 build).
+**Why:** An untyped null Postgres bind parameter used in an `IS NULL` check alongside a function call resolves ambiguously and can default to `bytea`, breaking `lower(bytea)` and `cast(bytea as numeric)` — caught only by running the query against a real database (Testcontainers), not by compiling or mocking. `cast(:x as string)` fixed the destination search; the equivalent numeric HQL cast did not, so the activity shortlist query is native SQL instead. Re-check this pattern with a real Postgres instance any time a new optional filter parameter is added in Trip/AI/Recommendation.
+
 <!-- Add new decisions above this line as you build. -->
