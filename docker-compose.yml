@@ -20,7 +20,11 @@ services:
       - pgdata:/var/lib/postgresql/data
       - ./infra/postgres/init-databases.sh:/docker-entrypoint-initdb.d/init-databases.sh:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-wayfare}"]
+      # -d postgres: pg_isready defaults to a database named after -U when -d is
+      # omitted, but no such database exists (only auth_db/user_db/etc. do) —
+      # that mismatch was logging "FATAL: database wayfare does not exist"
+      # every 5s even though the server was healthy the whole time.
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-wayfare} -d postgres"]
       interval: 5s
       timeout: 5s
       retries: 10
