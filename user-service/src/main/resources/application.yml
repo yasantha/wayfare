@@ -16,6 +16,13 @@ spring:
     bootstrap-servers: ${KAFKA_BROKERS:localhost:19092}
     consumer:
       group-id: user-service
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    template:
+      observation-enabled: true    # trace context propagated over Kafka headers (design §9.1)
+    listener:
+      observation-enabled: true
   security:
     oauth2:
       resourceserver:
@@ -25,6 +32,12 @@ spring:
 
 server:
   port: 8082
+
+# Outbox poller (platform-commons OutboxPoller, design §3.3)
+wayfare:
+  outbox:
+    poll-interval-ms: 500
+    batch-size: 100
 
 management:
   endpoints:

@@ -10,12 +10,12 @@ import com.wayfare.auth.repository.UserRepository;
 import com.wayfare.commons.correlation.Correlation;
 import com.wayfare.commons.error.Exceptions.ConflictException;
 import com.wayfare.commons.error.Exceptions.UnauthorizedException;
+import com.wayfare.commons.events.EventEnvelope;
 import org.slf4j.MDC;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 
@@ -95,12 +95,10 @@ public class AuthService {
 
     private String registeredPayload(User user) {
         try {
-            return objectMapper.writeValueAsString(Map.of(
-                    "eventType", "user.registered",
-                    "version", 1,
-                    "occurredAt", Instant.now().toString(),
-                    "userId", user.getId().toString(),
-                    "email", user.getEmail()));
+            Map<String, Object> envelope = EventEnvelope.wrap("user.registered", 1,
+                    MDC.get(Correlation.MDC_KEY),
+                    Map.of("userId", user.getId().toString(), "email", user.getEmail()));
+            return objectMapper.writeValueAsString(envelope);
         } catch (JsonProcessingException e) {
             throw new IllegalStateException("Failed to serialize user.registered payload", e);
         }

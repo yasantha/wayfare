@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.wayfare.commons.correlation.Correlation;
 import com.wayfare.commons.error.Exceptions.ResourceNotFoundException;
+import com.wayfare.commons.events.EventEnvelope;
 import com.wayfare.user.domain.OutboxEvent;
 import com.wayfare.user.domain.UserPreferences;
 import com.wayfare.user.domain.UserProfile;
@@ -91,13 +92,12 @@ public class UserService {
 
     private String preferencesPayload(UserPreferences p) {
         try {
-            return objectMapper.writeValueAsString(Map.of(
-                    "eventId", UUID.randomUUID().toString(),
-                    "eventType", "user.preferences.updated",
-                    "version", p.getVersion(),
-                    "userId", p.getUserId().toString(),
-                    "interests", p.getInterests(),
-                    "avoidTags", p.getAvoidTags()));
+            Map<String, Object> envelope = EventEnvelope.wrap("user.preferences.updated", p.getVersion(),
+                    MDC.get(Correlation.MDC_KEY),
+                    Map.of("userId", p.getUserId().toString(),
+                            "interests", p.getInterests(),
+                            "avoidTags", p.getAvoidTags()));
+            return objectMapper.writeValueAsString(envelope);
         } catch (JsonProcessingException e) {
             throw new IllegalStateException("Failed to serialize preferences payload", e);
         }

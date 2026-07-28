@@ -17,6 +17,16 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    template:
+      observation-enabled: true    # trace context propagated over Kafka headers (design §9.1)
+    listener:
+      observation-enabled: true
+
+# Outbox poller (platform-commons OutboxPoller, design §3.3)
+wayfare:
+  outbox:
+    poll-interval-ms: 500
+    batch-size: 100
 
 server:
   port: 8081

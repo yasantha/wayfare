@@ -38,6 +38,7 @@ Thumbs.db
 
 # === Local tooling ===
 .claude/settings.local.json
+.claude/scheduled_tasks.lock
 
 # === Docker / data volumes ===
 **/data/
