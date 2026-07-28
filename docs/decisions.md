@@ -45,4 +45,14 @@
 **Rejected:** Trusting Hibernate to infer the parameter type from context; using `cast(:x as java.math.BigDecimal)` (a Java class name — HQL wants its own type tokens like `big_decimal`, and even the correct token still mis-bound to bytea against real Postgres in this Hibernate 6.6.53 build).
 **Why:** An untyped null Postgres bind parameter used in an `IS NULL` check alongside a function call resolves ambiguously and can default to `bytea`, breaking `lower(bytea)` and `cast(bytea as numeric)` — caught only by running the query against a real database (Testcontainers), not by compiling or mocking. `cast(:x as string)` fixed the destination search; the equivalent numeric HQL cast did not, so the activity shortlist query is native SQL instead. Re-check this pattern with a real Postgres instance any time a new optional filter parameter is added in Trip/AI/Recommendation.
 
+## ADR-009 — @ConditionalOnBean in a custom auto-configuration needs @AutoConfigureAfter
+**Chosen:** `WayfareCommonsAutoConfiguration`'s `OutboxPoller` bean is annotated `@AutoConfigureAfter({DataSourceAutoConfiguration.class, JdbcTemplateAutoConfiguration.class, KafkaAutoConfiguration.class})` alongside its `@ConditionalOnBean({JdbcTemplate.class, KafkaTemplate.class})`.
+**Rejected:** `@ConditionalOnBean` alone, assuming Spring Boot would naturally process third-party auto-configurations after the framework's own ones.
+**Why:** `@ConditionalOnBean` only sees beans registered *before* the annotated configuration class runs; without an explicit ordering hint, `WayfareCommonsAutoConfiguration` could be processed before Boot's own Datasource/Jdbc/Kafka auto-configurations register their beans, silently skipping `OutboxPoller` creation with no error — the outbox rows would just accumulate unpublished forever. Caught only by `OutboxToKafkaIT` (a real Kafka Testcontainers test asserting a message actually arrives), not by unit tests, mocks, or compilation. Reinforces [[wayfare-project]]'s running theme: cross-service infrastructure code needs a real-infra integration test before it's trusted.
+
+## ADR-010 — Retry/DLT topology via Spring Kafka's @RetryableTopic, not hand-rolled topics
+**Chosen:** `@RetryableTopic(attempts=4, backoff=@Backoff(delay=2000, multiplier=2.0))` on `UserRegisteredConsumer`, with a `@DltHandler` for the terminal failure case.
+**Rejected:** Manually creating `.retry.5s`/`.retry.1m`/`.retry.10m`/`.dlq` topics and routing failures between them by hand, as design §3.2 describes at the infrastructure level.
+**Why:** Spring Kafka auto-creates the retry/DLT topic chain (`user.registered-retry-0`, `-retry-1`, ..., `-dlt`) and handles the routing/backoff itself — same observable behavior (exponential backoff, eventual dead-letter) for a fraction of the code, and it's the idiomatic Spring Kafka mechanism an interviewer would expect to see used rather than reimplemented.
+
 <!-- Add new decisions above this line as you build. -->
