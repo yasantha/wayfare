@@ -19,7 +19,7 @@ Each phase ends in something **runnable and demoable**. Never spend weeks with n
 | **3 — Messaging Backbone** ✅ | Kafka topics (auto-created), versioned event envelope, transactional outbox + poller, idempotent consumers (`processed_events`), retry + DLT topics via `@RetryableTopic`, trace propagation over Kafka headers | Publish → consume → redeliver same eventId → no-op; **13/13 ITs pass on real Kafka + Postgres** | 40 | 4 |
 | **4 — Trip Service** ✅ | Trip CRUD, itinerary versioning, days/items CRUD, reordering, snapshots, ownership enforcement, saga participation | Create and hand-edit a full trip end to end; user A cannot read user B's trip — **8/8 tests pass on real Postgres + Kafka** | 80 | 8 |
 | **5 — Itinerary AI Service** ✅ | Context builder, prompt templates, `LlmClient` port + free-provider adapters (Groq/Gemini/Ollama), structured output, validator + repair loop, async job lifecycle, quota, token/cost accounting, resilience (timeout/retry/circuit breaker), `DEMO_MODE` (real algorithmic builder, not fixtures) | **The money demo** — one request produces a real validated itinerary published to Kafka in the exact shape Trip Service already consumes — **10/10 tests pass on real Postgres + Kafka** | 100 | 10 |
-| **6 — Recommendation Service** | Projection consumers (`user.preferences.updated`, `trip.created`), rule-based scoring engine, endpoints, configurable weights | Suggested destinations and activities, computed with no cross-service call on the request path | 40 | 4 |
+| **6 — Recommendation Service** ✅ | Projection consumers (`user.preferences.updated`, `trip.created`), rule-based scoring engine, endpoints, configurable weights | Suggested destinations and activities, computed with no cross-service call on the request path — **9/9 tests pass on real Postgres + Kafka, no User Service running** | 40 | 4 |
 | **7 — Hardening & Handover** | Contract tests (one producer/consumer pair minimum), e2e smoke suite, Grafana dashboards + alerts, README polish, architecture diagram, tracing screenshot, deploy to a VPS, demo recording | A live URL (or recording) a stranger can use in under 10 minutes | 80 | 8 |
 
 **Parallelisation note:** if a second developer joins after Phase 3, Trip+Recommendation and Itinerary AI run in parallel, compressing the tail. Solo, keep it strictly sequential.
@@ -30,12 +30,13 @@ Each phase ends in something **runnable and demoable**. Never spend weeks with n
 
 | # | When | Done means |
 |---|---|---|
-| M1 | end Phase 0 | Whole stack boots with one command; CI green; spike proves Postgres+Kafka+tracing wired |
-| M2 | end Phase 1 | Client registers, logs in, calls an authenticated route via the gateway |
-| M3 | end Phase 2 | Destinations searchable; preferences persisted; `user.registered` flowing |
-| M4 | end Phase 3 | Outbox → Kafka → idempotent consumer verified end-to-end with tracing |
-| M5 | end Phase 4 | Trips created and hand-edited end to end; ownership suite passes |
-| M6 | end Phase 5 | Real itinerary generated, validated, delivered by event, persisted, editable |
+| M1 ✅ | end Phase 0 | Whole stack boots with one command; CI green; spike proves Postgres+Kafka+tracing wired |
+| M2 ✅ | end Phase 1 | Client registers, logs in, calls an authenticated route via the gateway |
+| M3 ✅ | end Phase 2 | Destinations searchable; preferences persisted; `user.registered` flowing |
+| M4 ✅ | end Phase 3 | Outbox → Kafka → idempotent consumer verified end-to-end with tracing |
+| M5 ✅ | end Phase 4 | Trips created and hand-edited end to end; ownership suite passes |
+| M6 ✅ | end Phase 5 | Real itinerary generated, validated, delivered by event, persisted, editable |
+| — ✅ | end Phase 6 | **All 6 services feature-complete.** Only hardening/polish/deployment remain. |
 | M7 | end Phase 7 | All scope done, deployed to staging, documented, demo recorded |
 
 ---
