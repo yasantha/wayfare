@@ -16,6 +16,13 @@ spring:
     bootstrap-servers: ${KAFKA_BROKERS:localhost:19092}
     consumer:
       group-id: trip-service
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    template:
+      observation-enabled: true    # trace context propagated over Kafka headers (design §9.1)
+    listener:
+      observation-enabled: true
   security:
     oauth2:
       resourceserver:
@@ -24,6 +31,14 @@ spring:
 
 server:
   port: 8084
+
+# Sync call to Catalog for destination snapshots at trip creation (design §3.1)
+wayfare:
+  catalog:
+    base-url: ${CATALOG_URI:http://localhost:8083}
+  outbox:
+    poll-interval-ms: 500
+    batch-size: 100
 
 management:
   endpoints:
