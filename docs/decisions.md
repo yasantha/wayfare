@@ -55,4 +55,19 @@
 **Rejected:** Manually creating `.retry.5s`/`.retry.1m`/`.retry.10m`/`.dlq` topics and routing failures between them by hand, as design §3.2 describes at the infrastructure level.
 **Why:** Spring Kafka auto-creates the retry/DLT topic chain (`user.registered-retry-0`, `-retry-1`, ..., `-dlt`) and handles the routing/backoff itself — same observable behavior (exponential backoff, eventual dead-letter) for a fraction of the code, and it's the idiomatic Spring Kafka mechanism an interviewer would expect to see used rather than reimplemented.
 
+## ADR-011 — Generation is triggered by direct HTTP to Itinerary AI, not a Trip-produced event
+**Chosen:** The client calls `POST /trips/{id}/itinerary:generate` directly on Itinerary AI Service (already wired at the gateway in Phase 1); Trip Service's role in the saga is purely consuming `itinerary.generation.succeeded`/`failed` (design §4.4 steps 3-4), plus a small internal endpoint (`PATCH /internal/trips/{id}/status`) Itinerary AI can call to flip a trip to GENERATING before starting work.
+**Rejected:** Having Trip Service itself produce an `itinerary.generation.requested` event for Itinerary AI to consume, as the design doc's §3.2 event catalogue literally states ("Producer: Trip").
+**Why:** The design doc is internally inconsistent here — §3.2's table says Trip produces the request event, but §5.2's endpoint table places the generate-trigger endpoint on **Itinerary AI Service**, and §7.1's sequence diagram shows the client hitting AI service directly, with AI persisting its own `generation_request` before ever touching Kafka. The sequence diagram is the more detailed, concrete source and is what the Phase 1 gateway routing already implements (`/api/v1/trips/*/itinerary:generate` → AI service directly) — so it's treated as authoritative. No functionality is lost: Trip still knows about every generation via the succeeded/failed events it consumes.
+
+## ADR-012 — Spring Data JPA derives query properties from the getter, not the field name
+**Chosen:** `ItineraryRepository.findByTripIdAndActiveTrue` — matching the entity's actual JavaBean property (`active`, exposed via `isActive()`).
+**Rejected:** `findByTripIdAndIsActiveTrue`, written first by analogy to the column name `is_active`.
+**Why:** A boolean field named `active` with a conventional `isActive()` getter has the JavaBean *property* name `active`, not `isActive` — Spring Data's method-name query derivation failed at application-context startup with `PropertyReferenceException: No property 'isActive' found for type 'Itinerary'`. Caught by `TripServiceIT`, not compilation (interfaces don't type-check their derived-query strings). The method turned out to be unused elsewhere in the codebase and was deleted rather than fixed-and-kept — YAGNI.
+
+## ADR-013 — Integration test fixtures must never use hardcoded literal dates
+**Chosen:** `TripServiceIT` computes all trip dates as `LocalDate.now().plusDays(N)`.
+**Rejected:** Hardcoded ISO date strings (`"2026-03-01"`, etc.), written when those dates were safely in the future.
+**Why:** `CreateTripRequest.startDate` has `@FutureOrPresent`. A multi-day session between Phase 3 and Phase 4 pushed the real wall-clock date past several of those hardcoded literals, so every trip-creation test started failing with 400 instead of 201 — a false regression with a one-line cause once traced (`TRIP_EXIT` went from a clean prior run to universal 400s). Any test asserting date-relative validation must derive its fixture dates from `now()`, never a literal.
+
 <!-- Add new decisions above this line as you build. -->
