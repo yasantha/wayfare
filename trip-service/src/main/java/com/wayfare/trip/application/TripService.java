@@ -126,13 +126,23 @@ public class TripService {
 
     private String tripCreatedPayload(Trip trip) {
         try {
+            // Mutable map, not Map.of(...): budgetAmount/budgetCurrency are optional
+            // and Map.of throws NullPointerException on any null value (ADR-015).
+            Map<String, Object> data = new java.util.LinkedHashMap<>();
+            data.put("tripId", trip.getId().toString());
+            data.put("userId", trip.getUserId().toString());
+            data.put("destinationId", trip.getDestinationId() != null ? trip.getDestinationId().toString() : "");
+            data.put("startDate", trip.getStartDate().toString());
+            data.put("endDate", trip.getEndDate().toString());
+            if (trip.getBudgetAmount() != null) {
+                data.put("budgetAmount", trip.getBudgetAmount());
+            }
+            if (trip.getBudgetCurrency() != null) {
+                data.put("budgetCurrency", trip.getBudgetCurrency());
+            }
+
             Map<String, Object> envelope = EventEnvelope.wrap("trip.created", 1,
-                    MDC.get(Correlation.MDC_KEY),
-                    Map.of("tripId", trip.getId().toString(),
-                            "userId", trip.getUserId().toString(),
-                            "destinationId", trip.getDestinationId() != null ? trip.getDestinationId().toString() : "",
-                            "startDate", trip.getStartDate().toString(),
-                            "endDate", trip.getEndDate().toString()));
+                    MDC.get(Correlation.MDC_KEY), data);
             return objectMapper.writeValueAsString(envelope);
         } catch (JsonProcessingException e) {
             throw new IllegalStateException("Failed to serialize trip.created payload", e);

@@ -9,6 +9,7 @@ import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.autoconfigure.jdbc.JdbcTemplateAutoConfiguration;
 import org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration;
@@ -56,13 +57,19 @@ public class WayfareCommonsAutoConfiguration {
     }
 
     /**
-     * Activates only when a service has both a DataSource (via JdbcTemplate)
-     * and Kafka (via KafkaTemplate) — i.e. it owns an outbox table. Catalog,
-     * with no Kafka dependency, never gets one.
+     * Activates when a service has both a DataSource (via JdbcTemplate) and
+     * Kafka (via KafkaTemplate) — i.e. it owns an outbox table. That bean-type
+     * check alone isn't precise enough, though: Spring Boot auto-configures a
+     * KafkaTemplate the moment spring-kafka is on the classpath, even for a
+     * consumer-only service with no outbox table at all (recommendation-service:
+     * consumes events, produces none, per the design's event catalogue). Such a
+     * service must opt out explicitly via {@code wayfare.outbox.enabled=false},
+     * or this poller queries a table that doesn't exist in its schema.
      */
     @Bean
     @ConditionalOnBean({JdbcTemplate.class, KafkaTemplate.class})
     @ConditionalOnMissingBean(OutboxPoller.class)
+    @ConditionalOnProperty(prefix = "wayfare.outbox", name = "enabled", matchIfMissing = true)
     public OutboxPoller outboxPoller(JdbcTemplate jdbcTemplate, KafkaTemplate<String, String> kafkaTemplate,
                                      @Value("${wayfare.outbox.batch-size:100}") int batchSize,
                                      @Value("${wayfare.outbox.send-timeout-ms:5000}") long sendTimeoutMs) {

@@ -16,6 +16,10 @@ spring:
     bootstrap-servers: ${KAFKA_BROKERS:localhost:19092}
     consumer:
       group-id: recommendation-service
+    template:
+      observation-enabled: true    # trace context propagated over Kafka headers (design §9.1)
+    listener:
+      observation-enabled: true
   security:
     oauth2:
       resourceserver:
@@ -24,6 +28,18 @@ spring:
 
 server:
   port: 8086
+
+# Sync call to Catalog for scoring candidates (design §3.1 — the one sync dep)
+wayfare:
+  catalog:
+    base-url: ${CATALOG_URI:http://localhost:8083}
+  outbox:
+    # This service only consumes events (user.preferences.updated, trip.created)
+    # and produces none — reco_db has no outbox table, so platform-commons'
+    # OutboxPoller must not activate here (it otherwise would: spring-kafka on
+    # the classpath auto-configures a KafkaTemplate bean regardless of whether
+    # anything is ever produced).
+    enabled: false
 
 management:
   endpoints:
