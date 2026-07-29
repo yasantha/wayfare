@@ -16,6 +16,13 @@ spring:
     bootstrap-servers: ${KAFKA_BROKERS:localhost:19092}
     consumer:
       group-id: itinerary-ai-service
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    template:
+      observation-enabled: true    # trace context propagated over Kafka headers (design §9.1)
+    listener:
+      observation-enabled: true
   security:
     oauth2:
       resourceserver:
@@ -44,6 +51,36 @@ llm:
 quota:
   per-user-per-day: ${GEN_QUOTA_PER_USER_PER_DAY:3}
   global-per-day: ${GEN_QUOTA_GLOBAL_PER_DAY:20}
+
+# Internal sync calls (design §3.1) — grounding + saga status update
+wayfare:
+  catalog:
+    base-url: ${CATALOG_URI:http://localhost:8083}
+  user:
+    base-url: ${USER_URI:http://localhost:8082}
+  trip:
+    base-url: ${TRIP_URI:http://localhost:8084}
+  outbox:
+    poll-interval-ms: 500
+    batch-size: 100
+
+# Resilience4j (design §7.6): timeout/retry/circuit-breaker around every LLM call
+resilience4j:
+  retry:
+    instances:
+      llm:
+        max-attempts: 2
+        wait-duration: 1s
+        exponential-backoff-multiplier: 2
+        retry-exceptions:
+          - com.wayfare.commons.error.Exceptions$ExternalServiceException
+  circuitbreaker:
+    instances:
+      llm:
+        sliding-window-size: 20
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 5
 
 management:
   endpoints:
