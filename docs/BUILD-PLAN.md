@@ -20,7 +20,7 @@ Each phase ends in something **runnable and demoable**. Never spend weeks with n
 | **4 — Trip Service** ✅ | Trip CRUD, itinerary versioning, days/items CRUD, reordering, snapshots, ownership enforcement, saga participation | Create and hand-edit a full trip end to end; user A cannot read user B's trip — **8/8 tests pass on real Postgres + Kafka** | 80 | 8 |
 | **5 — Itinerary AI Service** ✅ | Context builder, prompt templates, `LlmClient` port + free-provider adapters (Groq/Gemini/Ollama), structured output, validator + repair loop, async job lifecycle, quota, token/cost accounting, resilience (timeout/retry/circuit breaker), `DEMO_MODE` (real algorithmic builder, not fixtures) | **The money demo** — one request produces a real validated itinerary published to Kafka in the exact shape Trip Service already consumes — **10/10 tests pass on real Postgres + Kafka** | 100 | 10 |
 | **6 — Recommendation Service** ✅ | Projection consumers (`user.preferences.updated`, `trip.created`), rule-based scoring engine, endpoints, configurable weights | Suggested destinations and activities, computed with no cross-service call on the request path — **9/9 tests pass on real Postgres + Kafka, no User Service running** | 40 | 4 |
-| **7 — Hardening & Handover** | Contract tests (one producer/consumer pair minimum), e2e smoke suite, Grafana dashboards + alerts, README polish, architecture diagram, tracing screenshot, deploy to a VPS, demo recording | A live URL (or recording) a stranger can use in under 10 minutes | 80 | 8 |
+| **7 — Hardening & Handover** 🟡 | Contract-test reasoning (ADR-018), e2e smoke suite, Grafana dashboards + alerts, README rewrite, architecture diagram — **all done, verified live**. Deploy to a VPS, demo recording, literal tracing screenshot — **not done, need the user** (no cloud credentials or screen-recording capability available to the agent) | A live URL (or recording) a stranger can use in under 10 minutes | 80 | 8 |
 
 **Parallelisation note:** if a second developer joins after Phase 3, Trip+Recommendation and Itinerary AI run in parallel, compressing the tail. Solo, keep it strictly sequential.
 
@@ -74,6 +74,27 @@ Prometheus 9090 · Grafana 3000 · Redpanda Console 8090.
 | Distributed debugging slows everything | Tracing built in Phase 0, before real code depends on it |
 | LLM cost overrun on a public demo | `DEMO_MODE=true` default + per-user quota + hard spend cap set **before** first live call |
 | `platform-commons` becomes a distributed monolith | Restricted to error model, correlation filter, JWT utils. **No domain entities.** Enforced in review |
+
+---
+
+## Phase 7 checklist (current)
+
+Everything the agent can do without cloud credentials or a screen recorder is
+done and verified live (all 7 services healthy, smoke test 13/13, Prometheus
+scraping all services, Grafana dashboard rendering real data, a real Jaeger
+trace confirmed spanning `api-gateway`→`trip-service`). What's left needs you:
+
+- [x] End-to-end smoke suite (`scripts/smoke-test.sh`) — run against the real stack, 13/13
+- [x] Micrometer metrics for generation outcomes (design §9.1) — success/fail rate, latency percentiles, LLM spend
+- [x] Prometheus scrape config labeled per service; `infra/prometheus/alerts.yml` (7 rules)
+- [x] Grafana dashboard auto-provisioned (`infra/grafana/provisioning/`) — verified rendering real data
+- [x] Contract-testing decision reasoned and documented (ADR-018) rather than bolted on for its own sake
+- [x] README rewritten with real numbers throughout, no placeholders
+- [x] `docs/architecture.md` — diagrams matching the system as built, including the 2 points it diverged from the source design doc
+- [ ] **You:** deploy to a VPS (Hetzner/DigitalOcean/Oracle free tier/Fly.io — portfolio-build-plan §5) — needs credentials the agent doesn't have
+- [ ] **You:** record a short demo (screen recording) — needs your screen, not the agent's
+- [ ] **You:** a literal screenshot of a Jaeger trace for the README — the agent confirmed the trace exists and spans correctly via Jaeger's API, but can't capture a browser screenshot
+- [ ] **You:** decide `DEMO_MODE` policy for the public deployment (recommended: stay `true` by default per portfolio-build-plan §4 — bring-your-own-key for a live LLM call)
 
 ---
 
