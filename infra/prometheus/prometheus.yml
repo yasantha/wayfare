@@ -2,9 +2,16 @@ global:
   scrape_interval: 15s
   evaluation_interval: 15s
 
+rule_files:
+  - /etc/prometheus/alerts.yml
+
 # Each Spring Boot service exposes /actuator/prometheus.
 # host.docker.internal lets Prometheus (in a container) scrape apps
 # running on the host during local development.
+#
+# One static_configs block per service (not one list of targets) so each
+# carries its own `service` label — dashboards and alerts group/filter by
+# it (`sum by (service) (...)`), which a single unlabeled target list can't do.
 scrape_configs:
   - job_name: prometheus
     static_configs:
@@ -13,11 +20,17 @@ scrape_configs:
   - job_name: wayfare-services
     metrics_path: /actuator/prometheus
     static_configs:
-      - targets:
-          - "host.docker.internal:8080"   # api-gateway
-          - "host.docker.internal:8081"   # auth-service
-          - "host.docker.internal:8082"   # user-service
-          - "host.docker.internal:8083"   # catalog-service
-          - "host.docker.internal:8084"   # trip-service
-          - "host.docker.internal:8085"   # itinerary-ai-service
-          - "host.docker.internal:8086"   # recommendation-service
+      - targets: ["host.docker.internal:8080"]
+        labels: { service: api-gateway }
+      - targets: ["host.docker.internal:8081"]
+        labels: { service: auth-service }
+      - targets: ["host.docker.internal:8082"]
+        labels: { service: user-service }
+      - targets: ["host.docker.internal:8083"]
+        labels: { service: catalog-service }
+      - targets: ["host.docker.internal:8084"]
+        labels: { service: trip-service }
+      - targets: ["host.docker.internal:8085"]
+        labels: { service: itinerary-ai-service }
+      - targets: ["host.docker.internal:8086"]
+        labels: { service: recommendation-service }

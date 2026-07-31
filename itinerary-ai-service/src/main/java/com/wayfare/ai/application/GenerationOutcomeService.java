@@ -9,6 +9,10 @@ import com.wayfare.ai.repository.GenerationRequestRepository;
 import com.wayfare.ai.repository.OutboxRepository;
 import com.wayfare.ai.domain.OutboxEvent;
 import com.wayfare.commons.events.EventEnvelope;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.DistributionSummary;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +22,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Atomic persistence of generation-request state: creation, status, payload,
@@ -41,13 +46,39 @@ public class GenerationOutcomeService {
     private final QuotaService quotaService;
     private final ObjectMapper objectMapper;
 
+    // Design §9.1: "generation success rate, generation latency percentiles,
+    // LLM token spend per day" as Prometheus metrics — these were persisted to
+    // generation_requests but never exposed to Micrometer until now.
+    private final Counter succeededCounter;
+    private final Counter failedCounter;
+    private final Timer latencyTimer;
+    private final DistributionSummary costSummary;
+
     public GenerationOutcomeService(GenerationRequestRepository requests, GenerationPayloadRepository payloads,
-                                    OutboxRepository outbox, QuotaService quotaService, ObjectMapper objectMapper) {
+                                    OutboxRepository outbox, QuotaService quotaService, ObjectMapper objectMapper,
+                                    MeterRegistry meterRegistry) {
         this.requests = requests;
         this.payloads = payloads;
         this.outbox = outbox;
         this.quotaService = quotaService;
         this.objectMapper = objectMapper;
+
+        this.succeededCounter = Counter.builder("wayfare.generation.requests")
+                .tag("status", "succeeded")
+                .description("Itinerary generation outcomes")
+                .register(meterRegistry);
+        this.failedCounter = Counter.builder("wayfare.generation.requests")
+                .tag("status", "failed")
+                .description("Itinerary generation outcomes")
+                .register(meterRegistry);
+        this.latencyTimer = Timer.builder("wayfare.generation.latency")
+                .description("Time from PENDING to SUCCEEDED, end to end")
+                .publishPercentiles(0.5, 0.95, 0.99)
+                .register(meterRegistry);
+        this.costSummary = DistributionSummary.builder("wayfare.generation.cost.usd")
+                .description("Per-request estimated LLM cost")
+                .baseUnit("usd")
+                .register(meterRegistry);
     }
 
     /**
@@ -95,6 +126,10 @@ public class GenerationOutcomeService {
 
         outbox.save(OutboxEvent.of("generation_request", requestId.toString(),
                 "itinerary.generation.succeeded", succeededPayload(request, validatedJson, correlationId), correlationId));
+
+        succeededCounter.increment();
+        latencyTimer.record(latencyMs, TimeUnit.MILLISECONDS);
+        costSummary.record(cost.doubleValue());
     }
 
     @Transactional
@@ -105,6 +140,8 @@ public class GenerationOutcomeService {
 
         outbox.save(OutboxEvent.of("generation_request", requestId.toString(),
                 "itinerary.generation.failed", failedPayload(request, errorCode, correlationId), correlationId));
+
+        failedCounter.increment();
     }
 
     /**

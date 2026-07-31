@@ -1,0 +1,69 @@
+groups:
+  - name: wayfare
+    rules:
+      # --- Generation pipeline (design §9.1) ---
+      - alert: GenerationFailureRateHigh
+        expr: |
+          sum(rate(wayfare_generation_requests_total{status="failed"}[15m]))
+          /
+          sum(rate(wayfare_generation_requests_total[15m])) > 0.2
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Itinerary generation failure rate above 20%"
+          description: "{{ $value | humanizePercentage }} of generations failed over the last 15m."
+
+      - alert: GenerationLatencyP95High
+        expr: histogram_quantile(0.95, sum(rate(wayfare_generation_latency_seconds_bucket[15m])) by (le)) > 40
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Generation p95 latency above 40s"
+          description: "design §7.2 targets 10-40s end to end; p95 is {{ $value }}s."
+
+      - alert: DailyLlmSpendThreshold
+        expr: increase(wayfare_generation_cost_usd_sum[24h]) > 5
+        labels:
+          severity: warning
+        annotations:
+          summary: "Daily estimated LLM spend exceeds $5"
+          description: "Portfolio demo guardrail (build-plan §4) — check for a runaway loop or crawler."
+
+      # --- Kafka / outbox (design §9.1) ---
+      - alert: KafkaConsumerLagGrowing
+        expr: sum(kafka_consumer_fetch_manager_records_lag) by (service, topic) > 100
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Kafka consumer lag above 100 on {{ $labels.service }}/{{ $labels.topic }}"
+
+      - alert: CircuitBreakerOpen
+        expr: resilience4j_circuitbreaker_state{state="open"} == 1
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Circuit breaker '{{ $labels.name }}' is open on {{ $labels.service }}"
+
+      # --- Platform baseline ---
+      - alert: ServiceErrorRateHigh
+        expr: |
+          sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m])) by (service)
+          /
+          sum(rate(http_server_requests_seconds_count[5m])) by (service) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.service }} 5xx rate above 5%"
+
+      - alert: ServiceDown
+        expr: up{job="wayfare-services"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.service }} is not responding to scrapes"
